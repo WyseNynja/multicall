@@ -1,72 +1,36 @@
 pragma solidity >=0.5.0;
 pragma experimental ABIEncoderV2;
 
-/// @title Multicall2 - Aggregate results from multiple read-only function calls. Allow failures
+/// @title Multicall - Aggregate results from multiple read-only function calls. Allow failures
 /// @author Michael Elliot <mike@makerdao.com>
 /// @author Joshua Levine <joshua@makerdao.com>
 /// @author Nick Johnson <arachnid@notdot.net>
 /// @author Bryan Stitt <bryan@satoshiandkin.com>
+/// @author Victor Fage <victorfage@gmail.com>
 
-contract Multicall2 {
+
+contract Multicall {
     struct Call {
         address target;
         bytes callData;
     }
     struct Result {
-        bool success;
-        bytes returnData;
+        bool success; // If the call was success
+        bytes returnData; // Return of the call
     }
 
-    // Multiple calls in one! (Replaced by block_and_aggregate and try_block_and_aggregate)
-    // Reverts if any call fails.
-    function aggregate(Call[] memory calls)
-        public
-        returns (uint256 blockNumber, bytes[] memory returnData)
-    {
+    /**
+        @notice Returns the size of the auctions array
+
+        @param requireSuccess If true revert if a call fails
+                                else, check the success bool before using the returnData.
+        @param calls Token to be sold in exchange for `baseToken`
+
+        @return blockNumber The actual block number
+        @return returnData Array of Resuls
+    */
+    function aggregate(bool requireSuccess, Call[] memory calls) public returns (uint256 blockNumber, Result[] memory returnData) {
         blockNumber = block.number;
-        returnData = new bytes[](calls.length);
-        for(uint256 i = 0; i < calls.length; i++) {
-            // we use low level calls to intionally allow calling arbitrary functions.
-            // solium-disable-next-line security/no-low-level-calls
-            (bool success, bytes memory ret) = calls[i].target.call(calls[i].callData);
-            require(success, "Multicall2 aggregate: call failed");
-            returnData[i] = ret;
-        }
-    }
-
-    // Multiple calls in one!
-    // Reverts if any call fails.
-    // Use when you are querying the latest block and need all the calls to succeed.
-    // Check the hash to protect yourself from re-orgs!
-    function block_and_aggregate(Call[] memory calls)
-        public
-        returns (uint256 blockNumber, bytes32 blockHash, Result[] memory returnData)
-    {
-        (blockNumber, blockHash, returnData) = try_block_and_aggregate(true, calls);
-    }
-
-    // Multiple calls in one!
-    // If `require_success == true`, this revert if a call fails.
-    // If `require_success == false`, failures are allowed. Check the success bool before using the returnData.
-    // Use when you are querying the latest block.
-    // Returns the block and hash so you can protect yourself from re-orgs.
-    function try_block_and_aggregate(bool require_success, Call[] memory calls)
-        public
-        returns (uint256 blockNumber, bytes32 blockHash, Result[] memory returnData)
-    {
-        blockNumber = block.number;
-        blockHash = blockhash(blockNumber);
-        returnData = try_aggregate(require_success, calls);
-    }
-
-    // Multiple calls in one!
-    // If `require_success == true`, this revert if a call fails.
-    // If `require_success == false`, failures are allowed. Check the success bool before using the returnData.
-    // Use when you are querying a specific block number and hash.
-    function try_aggregate(bool require_success, Call[] memory calls)
-        public
-        returns (Result[] memory returnData)
-    {
         returnData = new Result[](calls.length);
 
         for(uint256 i = 0; i < calls.length; i++) {
@@ -74,15 +38,14 @@ contract Multicall2 {
             // solium-disable-next-line security/no-low-level-calls
             (bool success, bytes memory ret) = calls[i].target.call(calls[i].callData);
 
-            if (require_success) {
+            if (requireSuccess) {
                 // TODO: give a more useful message about specifically which call failed
-                require(success, "Multicall2 aggregate: call failed");
+                revert("Multicall aggregate: call failed");
             }
 
             returnData[i] = Result(success, ret);
         }
     }
-
 
     // Helper functions
     function getBlockHash() public view returns (bytes32 blockHash) {
