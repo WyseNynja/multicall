@@ -27,7 +27,7 @@ contract Multicall {
         @param calls Token to be sold in exchange for `baseToken`
 
         @return blockNumber The actual block number
-        @return returnData Array of Resuls
+        @return returnData Array of Results
     */
     function aggregate(bool requireSuccess, Call[] memory calls) public returns (uint256 blockNumber, Result[] memory returnData) {
         blockNumber = block.number;
