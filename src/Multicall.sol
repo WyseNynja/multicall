@@ -23,15 +23,15 @@ contract Multicall {
         @notice Returns the size of the auctions array
 
         @param requireSuccess If true revert if a call fails
-                                else, check the success bool before using the returnData.
+                                else, check the success bool before using the result.
         @param calls Token to be sold in exchange for `baseToken`
 
         @return blockNumber The actual block number
-        @return returnData Array of Results
+        @return results Array of Results, touples of success and returnData
     */
-    function aggregate(bool requireSuccess, Call[] memory calls) public returns (uint256 blockNumber, Result[] memory returnData) {
+    function aggregate(bool requireSuccess, Call[] memory calls) public returns (uint256 blockNumber, Result[] memory results) {
         blockNumber = block.number;
-        returnData = new Result[](calls.length);
+        results = new Result[](calls.length);
 
         for(uint256 i = 0; i < calls.length; i++) {
             // we use low level calls to intionally allow calling arbitrary functions.
@@ -43,7 +43,7 @@ contract Multicall {
                 revert("Multicall aggregate: call failed");
             }
 
-            returnData[i] = Result(success, ret);
+            results[i] = Result(success, ret);
         }
     }
 
